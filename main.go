@@ -1,12 +1,17 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -30,7 +35,7 @@ func unshorten(db *bolt.DB) http.HandlerFunc {
 				return nil
 			}
 			w.Header().Add("Location", string(url))
-			w.WriteHeader(http.StatusFound)
+			w.WriteHeader(http.StatusMovedPermanently)
 			w.Write(url)
 			return nil
 		})
@@ -41,6 +46,39 @@ func unshorten(db *bolt.DB) http.HandlerFunc {
 	}
 }
 
+func saveUrl(url string, keycache <-chan []byte, db *bolt.DB) (string, error) {
+	var key []byte
+	err := db.Update(func(tx *bolt.Tx) error {
+		invbucket, err := tx.CreateBucketIfNotExists([]byte("invshorty"))
+		if err != nil {
+			return err
+		}
+		existantKey := invbucket.Get([]byte(url))
+		if existantKey != nil {
+			key = existantKey
+			return nil
+		}
+		key = <-keycache
+		bucket, err := tx.CreateBucketIfNotExists([]byte("shorty"))
+		if err != nil {
+			return err
+		}
+		if bucket.Get(key) != nil {
+			return fmt.Errorf("Key collision: %s", key)
+		}
+		err = invbucket.Put([]byte(url), []byte(key))
+		if err != nil {
+			return err
+		}
+		err = bucket.Put([]byte(key), []byte(url))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return string(key), err
+}
+
 func shorten(host string, keycache <-chan []byte, db *bolt.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query().Get("url")
@@ -48,32 +86,11 @@ func shorten(host string, keycache <-chan []byte, db *bolt.DB) http.HandlerFunc 
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		var key []byte
-		err := db.Update(func(tx *bolt.Tx) error {
-			bucket, err := tx.CreateBucketIfNotExists([]byte("invshorty"))
-			if err != nil {
-				return err
-			}
-			existantKey := bucket.Get([]byte(url))
-			if existantKey != nil {
-				key = existantKey
-				return nil
-			}
-			key = <-keycache
-			err = bucket.Put([]byte(url), []byte(key))
-			if err != nil {
-				return err
-			}
-			bucket, err = tx.CreateBucketIfNotExists([]byte("shorty"))
-			if err != nil {
-				return err
-			}
-			err = bucket.Put([]byte(key), []byte(url))
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		m, _ := regexp.Match("^http(s?)://", []byte(url))
+		if !m {
+			url = "http://" + url
+		}
+		key, err := saveUrl(url, keycache, db)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -99,8 +116,33 @@ func keygen(keycache chan<- []byte) {
 	}
 }
 
+func stats(db *bolt.DB, out func(string)) {
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, syscall.SIGUSR1, syscall.SIGUSR2)
+	for {
+		s := <-sigch
+		var sum int64
+		var kvpairs string = ""
+		db.View(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket([]byte("shorty"))
+			bucket.ForEach(func(k, v []byte) error {
+				sum++
+				if s == syscall.SIGUSR2 {
+					kvpairs += fmt.Sprintf("\nkey=%s, value=%s", k, v)
+				}
+				return nil
+			})
+			return nil
+		})
+		out(fmt.Sprintf("Serving %d URLs%s", sum, kvpairs))
+	}
+}
+
 func main() {
-	const host = "makk.es"
+	host := flag.String("host", "localhost", "The hostname used to reach Shorty")
+	flag.Parse()
+
+	rand.Seed(time.Now().UnixNano())
 	keycache := make(chan []byte, 1000)
 	go keygen(keycache)
 
@@ -110,13 +152,17 @@ func main() {
 	}
 	defer db.Close()
 
-	http.HandleFunc("/shorten", shorten(host, keycache, db))
+	go stats(db, func(stats string) {
+		log.Println(stats)
+	})
+
+	http.HandleFunc("/shorten", shorten(*host, keycache, db))
 	http.HandleFunc("/", unshorten(db))
 	listener, err := net.Listen("tcp", "localhost:3002")
 	if err != nil {
 		log.Fatal("Error starting HTTP server", err)
 	}
-	log.Println("Shorty listening on " + host + ":3002")
+	log.Println("Shorty listening on " + *host + ":3002")
 	http.Serve(listener, nil)
 
 }
