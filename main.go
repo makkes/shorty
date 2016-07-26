@@ -46,7 +46,7 @@ func unshorten(db *bolt.DB) http.HandlerFunc {
 	}
 }
 
-func saveUrl(url string, keycache <-chan []byte, db *bolt.DB) (string, error) {
+func saveUrl(url string, keybuffer <-chan []byte, db *bolt.DB) (string, error) {
 	var key []byte
 	err := db.Update(func(tx *bolt.Tx) error {
 		invbucket, err := tx.CreateBucketIfNotExists([]byte("invshorty"))
@@ -58,7 +58,7 @@ func saveUrl(url string, keycache <-chan []byte, db *bolt.DB) (string, error) {
 			key = existantKey
 			return nil
 		}
-		key = <-keycache
+		key = <-keybuffer
 		bucket, err := tx.CreateBucketIfNotExists([]byte("shorty"))
 		if err != nil {
 			return err
@@ -79,7 +79,7 @@ func saveUrl(url string, keycache <-chan []byte, db *bolt.DB) (string, error) {
 	return string(key), err
 }
 
-func shorten(host string, keycache <-chan []byte, db *bolt.DB) http.HandlerFunc {
+func shorten(host string, keybuffer <-chan []byte, db *bolt.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query().Get("url")
 		if url == "" {
@@ -90,7 +90,7 @@ func shorten(host string, keycache <-chan []byte, db *bolt.DB) http.HandlerFunc 
 		if !m {
 			url = "http://" + url
 		}
-		key, err := saveUrl(url, keycache, db)
+		key, err := saveUrl(url, keybuffer, db)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -110,9 +110,9 @@ func RandStringBytes(n int) []byte {
 	return b
 }
 
-func keygen(keycache chan<- []byte) {
+func keygen(keybuffer chan<- []byte) {
 	for {
-		keycache <- RandStringBytes(10)
+		keybuffer <- RandStringBytes(10)
 	}
 }
 
@@ -143,8 +143,8 @@ func main() {
 	flag.Parse()
 
 	rand.Seed(time.Now().UnixNano())
-	keycache := make(chan []byte, 1000)
-	go keygen(keycache)
+	keybuffer := make(chan []byte, 1000)
+	go keygen(keybuffer)
 
 	db, err := bolt.Open("shorty.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
@@ -156,7 +156,7 @@ func main() {
 		log.Println(stats)
 	})
 
-	http.HandleFunc("/shorten", shorten(*host, keycache, db))
+	http.HandleFunc("/shorten", shorten(*host, keybuffer, db))
 	http.HandleFunc("/", unshorten(db))
 	listener, err := net.Listen("tcp", "localhost:3002")
 	if err != nil {
