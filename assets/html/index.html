@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+        integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
+        crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+        integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
+        crossorigin="anonymous"></script>
+    <style>
+        body * {
+            box-sizing: content-box;
+        }
+
+        a:hover {
+            text-decoration: none;
+        }
+
+        .container-narrow {
+            margin: 0px auto;
+            max-width: 960px;
+        }
+
+        .jumbotron {
+            margin: 60px 0;
+            text-align: center;
+        }
+
+        .jumbotron .form-control {
+            width: 75%;
+            margin: auto;
+        }
+
+        #result {
+            visibility: hidden;
+            margin-top: 1em;
+        }
+
+        #result.visible {
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container-narrow">
+        <h3><a href="/">Shorty</a></h3>
+        <hr>
+        <div class="jumbotron">
+            <h1>Enter the URL to shorten</h1>
+            <form>
+                <div class="form-group">
+                    <input type="text" class="form-control" id="url">
+                </div>
+                <button type="submit" class="btn btn-default">Shorten</button>
+            </form>
+            <input type="text" class="form-control" id="result"></input>
+        </div>
+    </div>
+    
+    <script type="text/javascript">
+        function shorten(url) {
+            var req = new XMLHttpRequest();
+            req.addEventListener("load", function() {
+                var res = document.querySelector("#result");
+                res.value = this.responseText;
+                res.classList.add("visible");
+                res.focus();
+                res.select();
+            });
+            req.open("GET", "/shorten?url=" + encodeURIComponent(url));
+            req.send();
+        }
+
+        window.addEventListener("load", function(ev) {
+            var form = document.querySelector("form");
+            form.addEventListener("submit", function(ev) {
+                ev.preventDefault();
+                shorten(document.querySelector("#url").value);
+            });
+        });
+    </script>
+</body>
+</html>
