@@ -38,7 +38,41 @@ Shorty provides exactly two HTTP endpoints:
 
 If you would like to use the HTML UI provided in `assets/html/`, simply copy the
 `index.html` file to somewhere reachable by your web server and make it proxy
-requests to `/s/` and `/shorten` to Shorty (running on port 3002).
+requests to `/s/` and `/shorten` to Shorty (running on port 3002). See below for
+an example Nginx configuration.
+
+# Example nginx configuration
+
+This configuration assumes shorty is running with the `-host` parameter set to
+`YOURDOMAIN` and the `index.html` file placed in `/home/makkes/shorty/www/`.
+
+```
+server {
+    listen              80;
+    server_name         YOURDOMAIN;
+
+    access_log /var/log/nginx/shorty_access.log;
+    error_log /var/log/nginx/shorty_error.log;
+
+    root /home/makkes/shorty/www/;
+
+    gzip on;
+    gzip_proxied any;
+    gzip_types text/css application/javascript;
+
+    location ~ /(shorten|s/) {
+        client_max_body_size 5g;
+
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwared-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
 
 # License
 
