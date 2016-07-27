@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -17,7 +18,7 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-func unshorten(db *bolt.DB) http.HandlerFunc {
+func unshorten(db *bolt.DB, statch chan<- []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := []byte(r.URL.Path[1:][strings.LastIndex(r.URL.Path[1:], "/")+1:])
 		if len(key) == 0 {
@@ -37,6 +38,7 @@ func unshorten(db *bolt.DB) http.HandlerFunc {
 			w.Header().Add("Location", string(url))
 			w.WriteHeader(http.StatusMovedPermanently)
 			w.Write(url)
+			statch <- url
 			return nil
 		})
 		if err != nil {
@@ -138,6 +140,42 @@ func stats(db *bolt.DB, out func(string)) {
 	}
 }
 
+func collectStats(statch <-chan []byte) {
+	db, err := bolt.Open("shorty_stats.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		log.Fatal("Error opening Bolt DB for stats: ", err)
+	}
+	defer db.Close()
+	for {
+		url := <-statch
+		err = db.Update(func(tx *bolt.Tx) error {
+			bucket, err := tx.CreateBucketIfNotExists([]byte("views"))
+			if err != nil {
+				return fmt.Errorf("Error opening/creating bucket 'views': %v", err)
+			}
+			viewBytes := bucket.Get(url)
+			var views uint64
+			if viewBytes != nil {
+				views, err = strconv.ParseUint(string(viewBytes), 10, 64)
+				if err != nil {
+					return fmt.Errorf("Error decoding views for %s: %v", string(url), err)
+				}
+			} else {
+				views = 0
+			}
+			views += 1
+			err = bucket.Put(url, []byte(strconv.FormatUint(views, 10)))
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
 func main() {
 	host := flag.String("host", "localhost", "The hostname used to reach Shorty")
 	flag.Parse()
@@ -156,8 +194,11 @@ func main() {
 		log.Println(stats)
 	})
 
+	statch := make(chan []byte)
+	go collectStats(statch)
+
 	http.HandleFunc("/shorten", shorten(*host, keybuffer, db))
-	http.HandleFunc("/", unshorten(db))
+	http.HandleFunc("/", unshorten(db, statch))
 	listener, err := net.Listen("tcp", "localhost:3002")
 	if err != nil {
 		log.Fatal("Error starting HTTP server", err)
