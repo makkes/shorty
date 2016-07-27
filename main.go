@@ -24,7 +24,8 @@ func unshorten(db *bolt.DB, statch chan<- []byte) http.HandlerFunc {
 		err := db.View(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket([]byte("shorty"))
 			if bucket == nil {
-				return fmt.Errorf("Bucket shorty not found")
+				w.WriteHeader(http.StatusNotFound)
+				return nil
 			}
 			url := bucket.Get(key)
 			if url == nil {
