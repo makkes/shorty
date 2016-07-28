@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -21,7 +22,8 @@ func unshorten(db *bolt.DB, statch chan<- []byte) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		err := db.View(func(tx *bolt.Tx) error {
+		var err error
+		err = db.View(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket([]byte("shorty"))
 			if bucket == nil {
 				w.WriteHeader(http.StatusNotFound)
@@ -34,9 +36,9 @@ func unshorten(db *bolt.DB, statch chan<- []byte) http.HandlerFunc {
 			}
 			w.Header().Add("Location", string(url))
 			w.WriteHeader(http.StatusMovedPermanently)
-			w.Write(url)
+			_, err = w.Write(url)
 			statch <- url
-			return nil
+			return err
 		})
 		if err != nil {
 			log.Println(err)
@@ -95,8 +97,10 @@ func shorten(host string, keybuffer <-chan []byte, db *bolt.DB) http.HandlerFunc
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		w.Write([]byte("http://" + host + "/s/" + string(key)))
-		w.Write([]byte("\n"))
+		_, err = io.WriteString(w, "http://"+host+"/s/"+string(key)+"\n")
+		if err != nil {
+			log.Printf("Error returning shortened URL: %v", err)
+		}
 	}
 }
 
@@ -127,7 +131,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Error opening Bolt DB: ", err)
 	}
-	defer db.Close()
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Printf("Error closing DB: %v", err)
+		}
+
+	}()
 
 	go stats(db, func(stats string) {
 		log.Println(stats)
@@ -143,6 +153,9 @@ func main() {
 		log.Fatal("Error starting HTTP server", err)
 	}
 	log.Println("Shorty listening on " + *host + ":3002")
-	http.Serve(listener, nil)
+	err = http.Serve(listener, nil)
+	if err != nil {
+		log.Panic(err)
+	}
 
 }

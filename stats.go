@@ -19,17 +19,19 @@ func stats(db *bolt.DB, out func(string)) {
 		s := <-sigch
 		var sum int64
 		var kvpairs string = ""
-		db.View(func(tx *bolt.Tx) error {
+		err := db.View(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket([]byte("shorty"))
-			bucket.ForEach(func(k, v []byte) error {
+			return bucket.ForEach(func(k, v []byte) error {
 				sum++
 				if s == syscall.SIGUSR2 {
 					kvpairs += fmt.Sprintf("\nkey=%s, value=%s", k, v)
 				}
 				return nil
 			})
-			return nil
 		})
+		if err != nil {
+			log.Printf("Error collecting stats: %v", err)
+		}
 		out(fmt.Sprintf("Serving %d URLs%s", sum, kvpairs))
 	}
 }
@@ -39,7 +41,13 @@ func collectStats(statch <-chan []byte) {
 	if err != nil {
 		log.Fatal("Error opening Bolt DB for stats: ", err)
 	}
-	defer db.Close()
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Printf("Error closing stats DB: %v", err)
+		}
+
+	}()
 	for {
 		url := <-statch
 		err = db.Update(func(tx *bolt.Tx) error {
