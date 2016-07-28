@@ -104,21 +104,6 @@ func shorten(host string, keybuffer <-chan []byte, db *bolt.DB) http.HandlerFunc
 	}
 }
 
-func RandStringBytes(n int) []byte {
-	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return b
-}
-
-func keygen(keybuffer chan<- []byte) {
-	for {
-		keybuffer <- RandStringBytes(10)
-	}
-}
-
 func main() {
 	host := flag.String("host", "localhost", "The hostname used to reach Shorty")
 	flag.Parse()
