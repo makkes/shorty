@@ -2,7 +2,7 @@
 
 A very simple URL shortener with an even simpler UI.
 
-# Installation
+## Installation
 
 To install Shorty, run 
 
@@ -13,12 +13,12 @@ go get github.com/makkes/shorty
 or grab the binary of the [most current
 release](https://github.com/makkes/shorty/releases).
 
-# Running
+## Running
 
 To start Shorty, simply call `shorty` (assuming that `$GOPATH/bin` is on your
 `$PATH`), passing the parameters fit to your environment (see below).
 
-# Configuration/Persistence
+## Configuration/Persistence
 
 The startup configuration of Shorty is provided via command-line parameters.
 Type `shorty -h` to get a list of all parameters.
@@ -27,7 +27,7 @@ Shorty uses Bolt for persisting all shortened URLs, so no need to setup a
 database server. However, this implies that you cannot distribute Shorty onto
 multiple nodes.
 
-# Usage
+## Usage
 
 Shorty provides exactly two HTTP endpoints:
 
@@ -41,7 +41,7 @@ If you would like to use the HTML UI provided in `assets/html/`, simply copy the
 requests to `/s/` and `/shorten` to Shorty (running on port 3002). See below for
 an example Nginx configuration.
 
-# Example nginx configuration
+## Example nginx configuration
 
 This configuration assumes shorty is running with the `-host` parameter set to
 `YOURDOMAIN` and the `index.html` file placed in `/home/makkes/shorty/www/`.
@@ -74,7 +74,7 @@ server {
 }
 ```
 
-# License
+## License
 
 This software is distributed under the BSD 2-Clause License, see
 [LICENSE](LICENSE) for more information.
