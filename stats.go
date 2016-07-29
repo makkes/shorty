@@ -18,7 +18,7 @@ func stats(db *bolt.DB, out func(string)) {
 	for {
 		s := <-sigch
 		var sum int64
-		var kvpairs string = ""
+		var kvpairs string
 		err := db.View(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket([]byte("shorty"))
 			return bucket.ForEach(func(k, v []byte) error {
@@ -42,18 +42,18 @@ func collectStats(statch <-chan []byte) {
 		log.Fatal("Error opening Bolt DB for stats: ", err)
 	}
 	defer func() {
-		err := db.Close()
+		closeerr := db.Close()
 		if err != nil {
-			log.Printf("Error closing stats DB: %v", err)
+			log.Printf("Error closing stats DB: %v", closeerr)
 		}
 
 	}()
 	for {
 		url := <-statch
 		err = db.Update(func(tx *bolt.Tx) error {
-			bucket, err := tx.CreateBucketIfNotExists([]byte("views"))
-			if err != nil {
-				return fmt.Errorf("Error opening/creating bucket 'views': %v", err)
+			bucket, berr := tx.CreateBucketIfNotExists([]byte("views"))
+			if berr != nil {
+				return fmt.Errorf("Error opening/creating bucket 'views': %v", berr)
 			}
 			viewBytes := bucket.Get(url)
 			var views uint64
@@ -65,7 +65,7 @@ func collectStats(statch <-chan []byte) {
 			} else {
 				views = 0
 			}
-			views += 1
+			views++
 			err = bucket.Put(url, []byte(strconv.FormatUint(views, 10)))
 			if err != nil {
 				return err

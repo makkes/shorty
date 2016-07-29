@@ -47,7 +47,7 @@ func unshorten(db *bolt.DB, statch chan<- []byte) http.HandlerFunc {
 	}
 }
 
-func saveUrl(url string, keybuffer <-chan []byte, db *bolt.DB) (string, error) {
+func saveURL(url string, keybuffer <-chan []byte, db *bolt.DB) (string, error) {
 	var key []byte
 	err := db.Update(func(tx *bolt.Tx) error {
 		invbucket, err := tx.CreateBucketIfNotExists([]byte("invshorty"))
@@ -67,11 +67,11 @@ func saveUrl(url string, keybuffer <-chan []byte, db *bolt.DB) (string, error) {
 		if bucket.Get(key) != nil {
 			return fmt.Errorf("Key collision: %s", key)
 		}
-		err = invbucket.Put([]byte(url), []byte(key))
+		err = invbucket.Put([]byte(url), key)
 		if err != nil {
 			return err
 		}
-		err = bucket.Put([]byte(key), []byte(url))
+		err = bucket.Put(key, []byte(url))
 		if err != nil {
 			return err
 		}
@@ -91,13 +91,13 @@ func shorten(host string, keybuffer <-chan []byte, db *bolt.DB) http.HandlerFunc
 		if !m {
 			url = "http://" + url
 		}
-		key, err := saveUrl(url, keybuffer, db)
+		key, err := saveURL(url, keybuffer, db)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = io.WriteString(w, "http://"+host+"/s/"+string(key)+"\n")
+		_, err = io.WriteString(w, "http://"+host+"/s/"+key+"\n")
 		if err != nil {
 			log.Printf("Error returning shortened URL: %v", err)
 		}
@@ -117,9 +117,9 @@ func main() {
 		log.Fatal("Error opening Bolt DB: ", err)
 	}
 	defer func() {
-		err := db.Close()
-		if err != nil {
-			log.Printf("Error closing DB: %v", err)
+		closeerr := db.Close()
+		if closeerr != nil {
+			log.Printf("Error closing DB: %v", closeerr)
 		}
 
 	}()
