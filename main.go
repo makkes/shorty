@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -47,40 +46,7 @@ func unshorten(db *bolt.DB, statch chan<- []byte) http.HandlerFunc {
 	}
 }
 
-func saveURL(url string, keybuffer <-chan []byte, db *bolt.DB) (string, error) {
-	var key []byte
-	err := db.Update(func(tx *bolt.Tx) error {
-		invbucket, err := tx.CreateBucketIfNotExists([]byte("invshorty"))
-		if err != nil {
-			return err
-		}
-		existantKey := invbucket.Get([]byte(url))
-		if existantKey != nil {
-			key = existantKey
-			return nil
-		}
-		key = <-keybuffer
-		bucket, err := tx.CreateBucketIfNotExists([]byte("shorty"))
-		if err != nil {
-			return err
-		}
-		if bucket.Get(key) != nil {
-			return fmt.Errorf("Key collision: %s", key)
-		}
-		err = invbucket.Put([]byte(url), key)
-		if err != nil {
-			return err
-		}
-		err = bucket.Put(key, []byte(url))
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	return string(key), err
-}
-
-func shorten(host string, keybuffer <-chan []byte, db *bolt.DB) http.HandlerFunc {
+func shorten(host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query().Get("url")
 		if url == "" {
@@ -91,7 +57,7 @@ func shorten(host string, keybuffer <-chan []byte, db *bolt.DB) http.HandlerFunc
 		if !m {
 			url = "http://" + url
 		}
-		key, err := saveURL(url, keybuffer, db)
+		key, err := db.SaveURL(url, keybuffer)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -131,7 +97,7 @@ func main() {
 	statch := make(chan []byte)
 	go collectStats(statch)
 
-	http.HandleFunc("/shorten", shorten(*host, keybuffer, db))
+	http.HandleFunc("/shorten", shorten(*host, keybuffer, NewBoltDB(db)))
 	http.HandleFunc("/", unshorten(db, statch))
 	listener, err := net.Listen("tcp", "localhost:3002")
 	if err != nil {

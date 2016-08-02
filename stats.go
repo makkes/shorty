@@ -67,10 +67,7 @@ func collectStats(statch <-chan []byte) {
 			}
 			views++
 			err = bucket.Put(url, []byte(strconv.FormatUint(views, 10)))
-			if err != nil {
-				return err
-			}
-			return nil
+			return err
 		})
 		if err != nil {
 			log.Println(err)
