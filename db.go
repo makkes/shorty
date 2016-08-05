@@ -9,6 +9,7 @@ import (
 // DB is the interface for bundling all database operations.
 type DB interface {
 	SaveURL(url string, keybuffer <-chan []byte) (string, error)
+	GetURL(key []byte) ([]byte, error)
 }
 
 // A BoltDB uses Bolt to persist URLs.
@@ -19,6 +20,19 @@ type BoltDB struct {
 // NewBoltDB returns a BoltDB that uses db as database.
 func NewBoltDB(db *bolt.DB) *BoltDB {
 	return &BoltDB{db}
+}
+
+func (db *BoltDB) GetURL(key []byte) ([]byte, error) {
+	var url []byte
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("shorty"))
+		if bucket == nil {
+			return nil
+		}
+		url = bucket.Get(key)
+		return nil
+	})
+	return url, err
 }
 
 // SaveURL saves the given url using a key from the keybuffer as short URL.

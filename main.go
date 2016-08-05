@@ -14,7 +14,7 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-func unshorten(db *bolt.DB, statch chan<- []byte) http.HandlerFunc {
+func unshorten(db DB, statch chan<- []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := []byte(r.URL.Path[1:][strings.LastIndex(r.URL.Path[1:], "/")+1:])
 		if len(key) == 0 {
@@ -22,27 +22,19 @@ func unshorten(db *bolt.DB, statch chan<- []byte) http.HandlerFunc {
 			return
 		}
 		var err error
-		err = db.View(func(tx *bolt.Tx) error {
-			bucket := tx.Bucket([]byte("shorty"))
-			if bucket == nil {
-				w.WriteHeader(http.StatusNotFound)
-				return nil
-			}
-			url := bucket.Get(key)
-			if url == nil {
-				w.WriteHeader(http.StatusNotFound)
-				return nil
-			}
-			w.Header().Add("Location", string(url))
-			w.WriteHeader(http.StatusMovedPermanently)
-			_, err = w.Write(url)
-			statch <- url
-			return err
-		})
+		url, err := db.GetURL(key)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+		if url == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Add("Location", string(url))
+		w.WriteHeader(http.StatusMovedPermanently)
+		_, err = w.Write(url)
+		statch <- url
 	}
 }
 
@@ -78,26 +70,27 @@ func main() {
 	keybuffer := make(chan []byte, 1000)
 	go keygen(keybuffer)
 
-	db, err := bolt.Open("shorty.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	boltDb, err := bolt.Open("shorty.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal("Error opening Bolt DB: ", err)
 	}
 	defer func() {
-		closeerr := db.Close()
+		closeerr := boltDb.Close()
 		if closeerr != nil {
 			log.Printf("Error closing DB: %v", closeerr)
 		}
 
 	}()
 
-	go stats(db, func(stats string) {
+	go stats(boltDb, func(stats string) {
 		log.Println(stats)
 	})
 
 	statch := make(chan []byte)
 	go collectStats(statch)
 
-	http.HandleFunc("/shorten", shorten(*host, keybuffer, NewBoltDB(db)))
+	db := NewBoltDB(boltDb)
+	http.HandleFunc("/shorten", shorten(*host, keybuffer, db))
 	http.HandleFunc("/", unshorten(db, statch))
 	listener, err := net.Listen("tcp", "localhost:3002")
 	if err != nil {

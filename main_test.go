@@ -10,9 +10,10 @@ import (
 )
 
 type TestDB struct {
-	res string
-	err error
-	url string
+	res     string
+	err     error
+	url     string
+	longURL []byte
 }
 
 func (db *TestDB) SaveURL(url string, keybuffer <-chan []byte) (string, error) {
@@ -20,7 +21,11 @@ func (db *TestDB) SaveURL(url string, keybuffer <-chan []byte) (string, error) {
 	return db.res, db.err
 }
 
-func setup(url string, db DB) *httptest.ResponseRecorder {
+func (db *TestDB) GetURL(key []byte) ([]byte, error) {
+	return db.longURL, db.err
+}
+
+func setupShorten(url string, db DB) *httptest.ResponseRecorder {
 	handler := shorten("sho.rt", nil, db)
 	req, _ := http.NewRequest("GET", url, nil)
 	w := httptest.NewRecorder()
@@ -28,22 +33,30 @@ func setup(url string, db DB) *httptest.ResponseRecorder {
 	return w
 }
 
+func setupUnshorten(url string, db DB, statch chan<- []byte) *httptest.ResponseRecorder {
+	handler := unshorten(db, statch)
+	req, _ := http.NewRequest("GET", url, nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	return w
+}
+
 func TestShortenFollowsTheHappyPath(t *testing.T) {
-	w := setup("?url=THEURL", &TestDB{res: "A new key"})
+	w := setupShorten("?url=THEURL", &TestDB{res: "A new key"})
 	assert := assert.NewAssert(t)
 	assert.Equal(w.Body.String(), "http://sho.rt/s/A new key\n", "Returned URL is incorrect")
 	assert.Equal(w.Code, http.StatusOK, "Returned status code is incorrect")
 }
 
 func TestShortenDoesntAcceptEmptyURLs(t *testing.T) {
-	w := setup("?url=", &TestDB{})
+	w := setupShorten("?url=", &TestDB{})
 	assert := assert.NewAssert(t)
 	assert.Equal(w.Code, http.StatusBadRequest, "Returned status code is incorrect")
 }
 
 func TestShortenShouldPrependProtocol(t *testing.T) {
 	db := &TestDB{}
-	setup("?url=shorty", db)
+	setupShorten("?url=shorty", db)
 
 	assert := assert.NewAssert(t)
 	assert.Equal(db.url, "http://shorty", "Protocol not prepended")
@@ -51,15 +64,45 @@ func TestShortenShouldPrependProtocol(t *testing.T) {
 
 func TestShortenShouldNotPrependProtocol(t *testing.T) {
 	db := &TestDB{}
-	setup("?url=http://shorty", db)
+	setupShorten("?url=http://shorty", db)
 
 	assert := assert.NewAssert(t)
 	assert.Equal(db.url, "http://shorty", "URL was messed with")
 }
 
 func TestShortenHandlesDBErrorsCorrectly(t *testing.T) {
-	w := setup("?url=test_url", &TestDB{res: "", err: fmt.Errorf("Error saving url")})
+	w := setupShorten("?url=test_url", &TestDB{res: "", err: fmt.Errorf("Error saving url")})
 
 	assert := assert.NewAssert(t)
 	assert.Equal(w.Code, http.StatusInternalServerError, "Returned status code is incorrect")
+}
+
+func TestUnshortenFollowsTheHappyPath(t *testing.T) {
+	statch := make(chan []byte, 1)
+	w := setupUnshorten("/unshorten/veryShort", &TestDB{longURL: []byte("TheLongURL")}, statch)
+	assert := assert.NewAssert(t)
+
+	assert.Equal(w.Header().Get("Location"), "TheLongURL", "Returned long URL is incorrect")
+	assert.Equal(string(<-statch), "TheLongURL", "unshorten wrote wrong URL to the stat channel")
+}
+
+func TestUnshortenHandlesUnknownKeysCorrectly(t *testing.T) {
+	w := setupUnshorten("/unshorten/veryShort", &TestDB{longURL: nil}, nil)
+	assert := assert.NewAssert(t)
+
+	assert.Equal(w.Code, http.StatusNotFound, "Returned HTTP status is incorrect")
+}
+
+func TestUnshortenHandlesWrongKeysCorrectly(t *testing.T) {
+	w := setupUnshorten("/no/key/", &TestDB{longURL: nil}, nil)
+	assert := assert.NewAssert(t)
+
+	assert.Equal(w.Code, http.StatusBadRequest, "Returned HTTP status is incorrect")
+}
+
+func TestUnshortenHandlesDBErrorsCorrectly(t *testing.T) {
+	w := setupUnshorten("/key", &TestDB{err: fmt.Errorf("Error retrieving long URL")}, nil)
+	assert := assert.NewAssert(t)
+
+	assert.Equal(w.Code, http.StatusInternalServerError, "Returned HTTP status is incorrect")
 }
