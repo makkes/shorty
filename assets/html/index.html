@@ -59,11 +59,11 @@
             <h1>Enter the URL to shorten</h1>
             <form>
                 <div class="form-group">
-                    <input type="text" class="form-control" id="url">
+                    <input tabindex="1" type="text" class="form-control" id="url">
                 </div>
                 <button type="submit" class="btn btn-default">Shorten</button>
             </form>
-            <input type="text" class="form-control" id="result">
+            <input tabindex="2" type="text" class="form-control" id="result">
         </div>
         <hr>
         <footer>Built with <a href="https://golang.org">Go</a></footer>
@@ -85,10 +85,12 @@
 
         window.addEventListener("load", function(ev) {
             var form = document.querySelector("form");
+            urlElem = document.querySelector("#url");
             form.addEventListener("submit", function(ev) {
                 ev.preventDefault();
-                shorten(document.querySelector("#url").value);
+                shorten(urlElem.value);
             });
+            urlElem.focus();
         });
     </script>
 </body>
