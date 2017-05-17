@@ -3,55 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Shorty</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
-        integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
-        crossorigin="anonymous">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
-        integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
-        crossorigin="anonymous"></script>
-    <style>
-        body * {
-            box-sizing: content-box;
-        }
-
-        a:hover {
-            text-decoration: none;
-        }
-
-        .container-narrow {
-            margin: 0px auto;
-            max-width: 960px;
-        }
-
-        .jumbotron {
-            margin: 60px 0;
-            text-align: center;
-        }
-
-        .jumbotron .form-control {
-            width: 75%;
-            margin: auto;
-        }
-
-        #result {
-            visibility: hidden;
-            margin-top: 1em;
-        }
-
-        #result.visible {
-            visibility: visible;
-        }
-
-        footer {
-            text-align: center;
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="js/shorty.js"></script>
 </head>
 <body>
 
     <div class="container-narrow">
-        <a href="https://github.com/makkes/shorty"><img style="position: absolute; top: 0; right: 0; border: 0;"
+        <a href="https://github.com/makkes/shorty"><img class="github-ribbon"
             src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
         <h3><a href="/">Shorty</a></h3>
         <hr>
@@ -69,29 +28,5 @@
         <footer>Built with <a href="https://golang.org">Go</a></footer>
     </div>
     
-    <script type="text/javascript">
-        function shorten(url) {
-            var req = new XMLHttpRequest();
-            req.addEventListener("load", function() {
-                var res = document.querySelector("#result");
-                res.value = this.responseText;
-                res.classList.add("visible");
-                res.focus();
-                res.select();
-            });
-            req.open("GET", "/shorten?url=" + encodeURIComponent(url));
-            req.send();
-        }
-
-        window.addEventListener("load", function(ev) {
-            var form = document.querySelector("form");
-            urlElem = document.querySelector("#url");
-            form.addEventListener("submit", function(ev) {
-                ev.preventDefault();
-                shorten(urlElem.value);
-            });
-            urlElem.focus();
-        });
-    </script>
 </body>
 </html>

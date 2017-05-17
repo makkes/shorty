@@ -1,0 +1,43 @@
+body * {
+    box-sizing: content-box;
+}
+
+a:hover {
+    text-decoration: none;
+}
+
+.github-ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border: 0;
+}
+
+.container-narrow {
+    margin: 0px auto;
+    max-width: 960px;
+}
+
+.jumbotron {
+    margin: 60px 0;
+    text-align: center;
+}
+
+.jumbotron .form-control {
+    width: 75%;
+    margin: auto;
+}
+
+#result {
+    visibility: hidden;
+    margin-top: 1em;
+}
+
+#result.visible {
+    visibility: visible;
+}
+
+footer {
+    text-align: center;
+}
+
