@@ -38,10 +38,10 @@ Shorty provides exactly two HTTP endpoints:
 1. `http://localhost:3002/s/<SHORT>` is a shortened URL and returns an HTTP 301
    with the location header set to the destination URL.
 
-If you would like to use the HTML UI provided in `assets/html/`, simply copy the
-`index.html` file to somewhere reachable by your web server and make it proxy
-requests to `/s/` and `/shorten` to Shorty (running on port 3002). See below for
-an example Nginx configuration.
+If you would like to use the HTML UI provided in `assets/`, simply copy the
+files included in `assets/` to somewhere reachable by your web server and make
+it proxy requests to `/s/` and `/shorten` to Shorty (running on port 3002). See
+below for an example Nginx configuration.
 
 ## Example nginx configuration
 
