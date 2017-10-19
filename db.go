@@ -8,7 +8,7 @@ import (
 
 // DB is the interface for bundling all database operations.
 type DB interface {
-	SaveURL(url string, keybuffer <-chan []byte) (string, error)
+	SaveURL(url string, key []byte) (string, error)
 	GetURL(key []byte) ([]byte, error)
 }
 
@@ -36,8 +36,7 @@ func (db *BoltDB) GetURL(key []byte) ([]byte, error) {
 }
 
 // SaveURL saves the given url using a key from the keybuffer as short URL.
-func (db *BoltDB) SaveURL(url string, keybuffer <-chan []byte) (string, error) {
-	var key []byte
+func (db *BoltDB) SaveURL(url string, key []byte) (string, error) {
 	err := db.Update(func(tx *bolt.Tx) error {
 		invbucket, err := tx.CreateBucketIfNotExists([]byte("invshorty"))
 		if err != nil {
@@ -45,10 +44,8 @@ func (db *BoltDB) SaveURL(url string, keybuffer <-chan []byte) (string, error) {
 		}
 		existantKey := invbucket.Get([]byte(url))
 		if existantKey != nil {
-			key = existantKey
 			return nil
 		}
-		key = <-keybuffer
 		bucket, err := tx.CreateBucketIfNotExists([]byte("shorty"))
 		if err != nil {
 			return err
