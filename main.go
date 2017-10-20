@@ -53,7 +53,7 @@ func shorten(host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
 		}
 		_key := values.Get("key")
 		if _key == "" {
-			newkey = <- keybuffer
+			newkey = <-keybuffer
 		} else {
 			newkey = []byte(_key)
 		}

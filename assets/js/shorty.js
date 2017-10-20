@@ -10,7 +10,7 @@ function shorten(url, key) {
 
     var s = "/shorten?url=" + encodeURIComponent(url);
     if (key) {
-        s += "&key=" + encodedURIComponent(key);
+        s += "&key=" + encodeURIComponent(key);
     }
     req.open("GET", s);
     req.send();
