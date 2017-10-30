@@ -51,8 +51,8 @@ below for an example Nginx configuration.
 
 ## Example nginx configuration
 
-This configuration assumes shorty is running with the `-host` parameter set to
-`YOURDOMAIN` and the `index.html` file placed in `/home/makkes/shorty/www/`.
+This configuration assumes shorty is running with the `SERVE_HOST` parameter set
+to `YOURDOMAIN` and the assets placed in `/home/makkes/shorty/www/`.
 
 ```
 server {
