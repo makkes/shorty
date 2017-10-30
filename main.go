@@ -1,12 +1,12 @@
 package main
 
 import (
-	"flag"
 	"io"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -38,7 +38,7 @@ func unshorten(db DB, statch chan<- []byte) http.HandlerFunc {
 	}
 }
 
-func shorten(host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
+func shorten(protocol string, host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query().Get("url")
 		if url == "" {
@@ -55,7 +55,7 @@ func shorten(host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = io.WriteString(w, "http://"+host+"/s/"+key+"\n")
+		_, err = io.WriteString(w, protocol+"://"+host+"/s/"+key+"\n")
 		if err != nil {
 			log.Printf("Error returning shortened URL: %v", err)
 		}
@@ -63,8 +63,25 @@ func shorten(host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
 }
 
 func main() {
-	host := flag.String("host", "localhost", "The hostname used to reach Shorty")
-	flag.Parse()
+	serveHost := os.Getenv("SERVE_HOST")
+	if serveHost == "" {
+		serveHost = "localhost"
+	}
+
+	listenHost := os.Getenv("LISTEN_HOST")
+	if listenHost == "" {
+		listenHost = "localhost"
+	}
+
+	listenPort := os.Getenv("LISTEN_PORT")
+	if listenPort == "" {
+		listenPort = "3002"
+	}
+
+	serveProtocol := os.Getenv("SERVE_PROTOCOL")
+	if serveProtocol == "" {
+		serveProtocol = "https"
+	}
 
 	rand.Seed(time.Now().UnixNano())
 	keybuffer := make(chan []byte, 1000)
@@ -74,12 +91,12 @@ func main() {
 	if err != nil {
 		log.Fatal("Error opening Bolt DB: ", err)
 	}
+
 	defer func() {
 		closeerr := boltDb.Close()
 		if closeerr != nil {
 			log.Printf("Error closing DB: %v", closeerr)
 		}
-
 	}()
 
 	go stats(boltDb, func(stats string) {
@@ -90,13 +107,13 @@ func main() {
 	go collectStats(statch)
 
 	db := NewBoltDB(boltDb)
-	http.HandleFunc("/shorten", shorten(*host, keybuffer, db))
+	http.HandleFunc("/shorten", shorten(serveProtocol, serveHost, keybuffer, db))
 	http.HandleFunc("/", unshorten(db, statch))
-	listener, err := net.Listen("tcp", "localhost:3002")
+	listener, err := net.Listen("tcp", listenHost+":"+listenPort)
 	if err != nil {
 		log.Fatal("Error starting HTTP server", err)
 	}
-	log.Println("Shorty listening on " + *host + ":3002")
+	log.Printf("Shorty listening on %s:%s\n", listenHost, listenPort)
 	err = http.Serve(listener, nil)
 	if err != nil {
 		log.Panic(err)
