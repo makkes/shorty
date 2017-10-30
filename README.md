@@ -22,8 +22,14 @@ To start Shorty, simply call `shorty` (assuming that `$GOPATH/bin` is on your
 
 ## Configuration/Persistence
 
-The startup configuration of Shorty is provided via command-line parameters.
-Type `shorty -h` to get a list of all parameters.
+The startup configuration of Shorty is provided via environment variables:
+
+|Variable|Description|Default
+|---|---|---
+|LISTEN_HOST|The IP address/hostname to listen on|localhost
+|LISTEN_PORT|The port to listen on|3002
+|SERVE_HOST|The host used by users to reach Shorty|localhost
+|SERVE_PROTOCOL|One of 'http' or 'https'|https
 
 Shorty uses Bolt for persisting all shortened URLs, so no need to setup a
 database server. However, this implies that you cannot distribute Shorty onto
@@ -45,8 +51,8 @@ below for an example Nginx configuration.
 
 ## Example nginx configuration
 
-This configuration assumes shorty is running with the `-host` parameter set to
-`YOURDOMAIN` and the `index.html` file placed in `/home/makkes/shorty/www/`.
+This configuration assumes shorty is running with the `SERVE_HOST` parameter set
+to `YOURDOMAIN` and the assets placed in `/home/makkes/shorty/www/`.
 
 ```
 server {

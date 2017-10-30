@@ -25,8 +25,8 @@ func (db *TestDB) GetURL(key []byte) ([]byte, error) {
 	return db.longURL, db.err
 }
 
-func setupShorten(url string, db DB) *httptest.ResponseRecorder {
-	handler := shorten("sho.rt", nil, db)
+func setupShorten(url, proto string, db DB) *httptest.ResponseRecorder {
+	handler := shorten(proto, "sho.rt", nil, db)
 	req, _ := http.NewRequest("GET", url, nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -42,21 +42,33 @@ func setupUnshorten(url string, db DB, statch chan<- []byte) *httptest.ResponseR
 }
 
 func TestShortenFollowsTheHappyPath(t *testing.T) {
-	w := setupShorten("?url=THEURL", &TestDB{res: "A new key"})
+	w := setupShorten("?url=THEURL", "http", &TestDB{res: "A new key"})
 	assert := assert.NewAssert(t)
 	assert.Equal(w.Body.String(), "http://sho.rt/s/A new key\n", "Returned URL is incorrect")
 	assert.Equal(w.Code, http.StatusOK, "Returned status code is incorrect")
 }
 
 func TestShortenDoesntAcceptEmptyURLs(t *testing.T) {
-	w := setupShorten("?url=", &TestDB{})
+	w := setupShorten("?url=", "http", &TestDB{})
 	assert := assert.NewAssert(t)
 	assert.Equal(w.Code, http.StatusBadRequest, "Returned status code is incorrect")
 }
 
+func TestShortenRespectsTheProtocol(t *testing.T) {
+	w := setupShorten("?url=THEURL", "http", &TestDB{res: "A new key"})
+	a := assert.NewAssert(t)
+	a.Equal(w.Body.String(), "http://sho.rt/s/A new key\n", "Returned URL is incorrect")
+	a.Equal(w.Code, http.StatusOK, "Returned status code is incorrect")
+
+	w = setupShorten("?url=THEURL", "https", &TestDB{res: "A new key"})
+	a = assert.NewAssert(t)
+	a.Equal(w.Body.String(), "https://sho.rt/s/A new key\n", "Returned URL is incorrect")
+	a.Equal(w.Code, http.StatusOK, "Returned status code is incorrect")
+}
+
 func TestShortenShouldPrependProtocol(t *testing.T) {
 	db := &TestDB{}
-	setupShorten("?url=shorty", db)
+	setupShorten("?url=shorty", "http", db)
 
 	assert := assert.NewAssert(t)
 	assert.Equal(db.url, "http://shorty", "Protocol not prepended")
@@ -64,14 +76,14 @@ func TestShortenShouldPrependProtocol(t *testing.T) {
 
 func TestShortenShouldNotPrependProtocol(t *testing.T) {
 	db := &TestDB{}
-	setupShorten("?url=http://shorty", db)
+	setupShorten("?url=http://shorty", "http", db)
 
 	assert := assert.NewAssert(t)
 	assert.Equal(db.url, "http://shorty", "URL was messed with")
 }
 
 func TestShortenHandlesDBErrorsCorrectly(t *testing.T) {
-	w := setupShorten("?url=test_url", &TestDB{res: "", err: fmt.Errorf("Error saving url")})
+	w := setupShorten("?url=test_url", "http", &TestDB{res: "", err: fmt.Errorf("Error saving url")})
 
 	assert := assert.NewAssert(t)
 	assert.Equal(w.Code, http.StatusInternalServerError, "Returned status code is incorrect")
