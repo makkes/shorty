@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -83,11 +84,13 @@ func main() {
 		serveProtocol = "https"
 	}
 
+	dbDir := os.Getenv("DB_DIR")
+
 	rand.Seed(time.Now().UnixNano())
 	keybuffer := make(chan []byte, 1000)
 	go keygen(keybuffer)
 
-	boltDb, err := bolt.Open("shorty.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	boltDb, err := bolt.Open(path.Join(dbDir, "shorty.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal("Error opening Bolt DB: ", err)
 	}
@@ -104,7 +107,7 @@ func main() {
 	})
 
 	statch := make(chan []byte)
-	go collectStats(statch)
+	go collectStats(dbDir, statch)
 
 	db := NewBoltDB(boltDb)
 	http.HandleFunc("/shorten", shorten(serveProtocol, serveHost, keybuffer, db))

@@ -30,6 +30,7 @@ The startup configuration of Shorty is provided via environment variables:
 |LISTEN_PORT|The port to listen on|3002
 |SERVE_HOST|The host used by users to reach Shorty|localhost
 |SERVE_PROTOCOL|One of 'http' or 'https'|https
+|DB_DIR|The directory used to store Shorty's database files|the current directory
 
 Shorty uses Bolt for persisting all shortened URLs, so no need to setup a
 database server. However, this implies that you cannot distribute Shorty onto
