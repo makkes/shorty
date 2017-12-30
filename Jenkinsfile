@@ -11,7 +11,7 @@ node {
         checkout scm
 
             stage('compile') {
-                sh 'go build'
+                sh 'go get && go build'
             }
 
         stage('build') {
