@@ -110,8 +110,13 @@ func main() {
 	go collectStats(dbDir, statch)
 
 	db := NewBoltDB(boltDb)
+
+	fs := http.FileServer(http.Dir("assets"))
+	http.Handle("/", fs)
+
 	http.HandleFunc("/shorten", shorten(serveProtocol, serveHost, keybuffer, db))
-	http.HandleFunc("/", unshorten(db, statch))
+
+	http.HandleFunc("/s/", unshorten(db, statch))
 	listener, err := net.Listen("tcp", listenHost+":"+listenPort)
 	if err != nil {
 		log.Fatal("Error starting HTTP server", err)
