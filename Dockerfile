@@ -10,6 +10,6 @@ FROM alpine:latest
 
 WORKDIR /root
 COPY --from=builder /go/src/github.com/makkes/shorty/shorty .
-COPY --from=builder /go/src/github.com/makkes/shorty/assets .
+COPY --from=builder /go/src/github.com/makkes/shorty/assets assets
 
 CMD ["./shorty"]
