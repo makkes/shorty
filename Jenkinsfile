@@ -8,7 +8,7 @@
 
         checkout scm
 
-            docker.image('golang:1.8').withRun('-u root') {
+            docker.image('golang:1.8').inside('-u root') {
                 stage('compile') {
                     sh 'go get && go build'
                 }
