@@ -8,13 +8,13 @@
 
         checkout scm
 
-            docker.image('golang:1.8').inside('-u root') {
+            docker.image('golang:1.8').inside('-u root -v ${pwd()}:/go/src/github.com/makkes/shorty') {
                 stage('compile') {
-                    sh 'go get && go build'
+                    sh 'cd /go/src/github.com/makkes/shorty && go get && go build'
                 }
 
                 stage('build') {
-                    sh 'docker build -t shorty:latest .'
+                    sh 'cd /go/src/github.com/makkes/shorty && docker build -t shorty:latest .'
                 }
             }
     }
