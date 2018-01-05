@@ -11,7 +11,7 @@
             docker.image('golang:1.8').inside {
 
                 withEnv([
-                        'GIT_COMMITTER_EMAIL=jenkins@jenkins.makk.es'
+                        'GIT_COMMITTER_EMAIL=jenkins@jenkins.makk.es',
                         'GIT_COMMITTER_NAME=Jenkins'
                 ]) {
                     stage('compile') {
