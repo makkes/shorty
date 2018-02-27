@@ -41,7 +41,9 @@ func unshorten(db DB, statch chan<- []byte) http.HandlerFunc {
 
 func shorten(protocol string, host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		url := r.URL.Query().Get("url")
+		var newkey []byte
+		values := r.URL.Query()
+		url := values.Get("url")
 		if url == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -50,7 +52,13 @@ func shorten(protocol string, host string, keybuffer <-chan []byte, db DB) http.
 		if !m {
 			url = "http://" + url
 		}
-		key, err := db.SaveURL(url, keybuffer)
+		_key := values.Get("key")
+		if _key == "" {
+			newkey = <-keybuffer
+		} else {
+			newkey = []byte(_key)
+		}
+		key, err := db.SaveURL(url, newkey)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)

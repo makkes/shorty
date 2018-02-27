@@ -26,16 +26,43 @@ function shorten(url) {
         res.focus();
         res.select();
     });
-    req.open("GET", "/shorten?url=" + encodeURIComponent(url));
+
+    var s = "/shorten?url=" + encodeURIComponent(url);
+    if (key) {
+        s += "&key=" + encodeURIComponent(key);
+    }
+    req.open("GET", s);
+    req.send();
+}
+function shorten_new(url, key) {
+    var req = new XMLHttpRequest();
+    req.addEventListener("load", function() {
+        var res = document.querySelector("#result");
+        if (this.status !== 200) {
+            feedback('An unrecoverable error occurred.');
+            return;
+        }
+        res.value = this.responseText;
+        res.classList.add("visible");
+        res.focus();
+        res.select();
+    });
+
+    var s = "/shorten?url=" + encodeURIComponent(url);
+    if (key) {
+        s += "&key=" + encodeURIComponent(key);
+    }
+    req.open("GET", s);
     req.send();
 }
 
 window.addEventListener("load", function(ev) {
     var form = document.querySelector("form");
     urlElem = document.querySelector("#url");
+    keyElem = document.querySelector("#key");
     form.addEventListener("submit", function(ev) {
         ev.preventDefault();
-        shorten(urlElem.value);
+        shorten(urlElem.value, keyElem.value);
     });
     urlElem.focus();
 });
