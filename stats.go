@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"strconv"
 	"syscall"
 	"time"
@@ -36,8 +37,8 @@ func stats(db *bolt.DB, out func(string)) {
 	}
 }
 
-func collectStats(statch <-chan []byte) {
-	db, err := bolt.Open("shorty_stats.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+func collectStats(dbDir string, statch <-chan []byte) {
+	db, err := bolt.Open(path.Join(dbDir, "shorty_stats.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal("Error opening Bolt DB for stats: ", err)
 	}
