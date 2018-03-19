@@ -44,3 +44,4 @@ There are Docker images available at https://hub.docker.com/r/makkes/shorty/.
 
 This software is distributed under the BSD 2-Clause License, see
 [LICENSE](LICENSE) for more information.
+
