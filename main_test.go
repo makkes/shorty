@@ -42,6 +42,16 @@ func setupUnshorten(url string, db db.DB) *httptest.ResponseRecorder {
 	return w
 }
 
+func TestInfoReturnsInfoAboutTheRunningInstance(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/info", nil)
+	w := httptest.NewRecorder()
+	http.HandlerFunc(info).ServeHTTP(w, req)
+
+	assert := assert.NewAssert(t)
+	assert.Equal(w.Code, http.StatusOK, "Unexpected HTTP status")
+	assert.Match("This is Shorty, running on ", w.Body.String(), "Unexpected body")
+}
+
 func TestShortenFollowsTheHappyPath(t *testing.T) {
 	w := setupShorten("?url=THEURL", "http", &TestDB{res: "A new key"})
 	assert := assert.NewAssert(t)
