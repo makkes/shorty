@@ -69,6 +69,12 @@ func shorten(protocol string, host string, keybuffer <-chan []byte, db DB) http.
 }
 
 func main() {
+
+	backends := map[string]func() (DB, error){
+		"dynamodb": NewDynamoDB,
+		"bolt":     NewBoltDB,
+	}
+
 	serveHost := os.Getenv("SERVE_HOST")
 	if serveHost == "" {
 		serveHost = "localhost"
@@ -89,13 +95,18 @@ func main() {
 		serveProtocol = "https"
 	}
 
+	backend := os.Getenv("BACKEND")
+	if backend == "" {
+		backend = "bolt"
+	}
+
 	rand.Seed(time.Now().UnixNano())
 	keybuffer := make(chan []byte, 1000)
 	go keygen(keybuffer)
 
-	db, err := NewDynamoDB()
+	db, err := backends[backend]()
 	if err != nil {
-		log.Fatalf("Error creating DynamoDB connection: %s", err)
+		log.Fatalf("Error creating DB backend: %s", err)
 	}
 
 	fs := http.FileServer(http.Dir("assets"))

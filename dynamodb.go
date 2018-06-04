@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/pkg/errors"
 )
 
 // DynamoDB encapsulates all DynamoDB-related database functions
@@ -21,10 +23,9 @@ type ShortenedURL struct {
 }
 
 // NewDynamoDB creates and initializes a new DynamoDB connection
-func NewDynamoDB() (*DynamoDB, error) {
+func NewDynamoDB() (DB, error) {
 	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String("eu-west-1"),
-		Credentials: credentials.NewSharedCredentials("", "default"),
+		Region: aws.String("eu-west-1"),
 	})
 	if err != nil {
 		return nil, err
@@ -109,12 +110,15 @@ func (db *DynamoDB) SaveURL(url string, keybuffer <-chan []byte) (string, error)
 	input := &dynamodb.PutItemInput{
 		Item:                av,
 		TableName:           aws.String(db.tableName),
-		ConditionExpression: aws.String("attribute_not_exists(Key)"),
+		ConditionExpression: aws.String("attribute_not_exists(#k)"),
+		ExpressionAttributeNames: map[string]*string{
+			"#k": aws.String("key"),
+		},
 	}
 
 	_, err = db.svc.PutItem(input)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, fmt.Sprintf("Error saving item %#v", shortenedUrl))
 	}
 	return key, nil
 }

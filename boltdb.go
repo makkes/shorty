@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"os"
 	"path"
 	"strconv"
 	"time"
@@ -16,8 +18,14 @@ type BoltDB struct {
 }
 
 // NewBoltDB returns a BoltDB that uses db as database.
-func NewBoltDB(db *bolt.DB) *BoltDB {
-	return &BoltDB{db}
+func NewBoltDB() (DB, error) {
+	dbDir := os.Getenv("DB_DIR")
+	db, err := bolt.Open(path.Join(dbDir, "shorty.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error opening Bolt DB: %s", err))
+	}
+
+	return &BoltDB{db}, nil
 }
 
 func (db *BoltDB) GetURL(key []byte) ([]byte, error) {
