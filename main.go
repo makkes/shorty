@@ -1,21 +1,21 @@
 package main
 
 import (
+	"github.com/makkes/shorty/boltdb"
+	"github.com/makkes/shorty/db"
+	"github.com/makkes/shorty/dynamodb"
 	"io"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/boltdb/bolt"
 )
 
-func unshorten(db DB, statch chan<- []byte) http.HandlerFunc {
+func unshorten(db db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := []byte(r.URL.Path[1:][strings.LastIndex(r.URL.Path[1:], "/")+1:])
 		if len(key) == 0 {
@@ -35,11 +35,19 @@ func unshorten(db DB, statch chan<- []byte) http.HandlerFunc {
 		w.Header().Add("Location", string(url))
 		w.WriteHeader(http.StatusMovedPermanently)
 		_, err = w.Write(url)
-		statch <- url
 	}
 }
 
-func shorten(protocol string, host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
+func info(w http.ResponseWriter, r *http.Request) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	io.WriteString(w, "This is Shorty, running on "+hostname+"\n")
+}
+
+func shorten(protocol string, host string, keybuffer <-chan []byte, db db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query().Get("url")
 		if url == "" {
@@ -64,6 +72,12 @@ func shorten(protocol string, host string, keybuffer <-chan []byte, db DB) http.
 }
 
 func main() {
+
+	backends := map[string]func() (db.DB, error){
+		"dynamodb": dynamodb.NewDynamoDB,
+		"bolt":     boltdb.NewBoltDB,
+	}
+
 	serveHost := os.Getenv("SERVE_HOST")
 	if serveHost == "" {
 		serveHost = "localhost"
@@ -84,39 +98,27 @@ func main() {
 		serveProtocol = "https"
 	}
 
-	dbDir := os.Getenv("DB_DIR")
+	backend := os.Getenv("BACKEND")
+	if backend == "" {
+		backend = "bolt"
+	}
 
 	rand.Seed(time.Now().UnixNano())
 	keybuffer := make(chan []byte, 1000)
 	go keygen(keybuffer)
 
-	boltDb, err := bolt.Open(path.Join(dbDir, "shorty.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := backends[backend]()
 	if err != nil {
-		log.Fatal("Error opening Bolt DB: ", err)
+		log.Fatalf("Error creating DB backend: %s", err)
 	}
-
-	defer func() {
-		closeerr := boltDb.Close()
-		if closeerr != nil {
-			log.Printf("Error closing DB: %v", closeerr)
-		}
-	}()
-
-	go stats(boltDb, func(stats string) {
-		log.Println(stats)
-	})
-
-	statch := make(chan []byte)
-	go collectStats(dbDir, statch)
-
-	db := NewBoltDB(boltDb)
 
 	fs := http.FileServer(http.Dir("assets"))
 	http.Handle("/", fs)
 
 	http.HandleFunc("/shorten", shorten(serveProtocol, serveHost, keybuffer, db))
+	http.HandleFunc("/info", info)
 
-	http.HandleFunc("/s/", unshorten(db, statch))
+	http.HandleFunc("/s/", unshorten(db))
 	listener, err := net.Listen("tcp", listenHost+":"+listenPort)
 	if err != nil {
 		log.Fatal("Error starting HTTP server", err)
