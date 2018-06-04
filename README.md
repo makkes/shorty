@@ -30,11 +30,25 @@ The startup configuration of Shorty is provided via environment variables:
 |LISTEN_PORT|The port to listen on|3002
 |SERVE_HOST|The host used by users to reach Shorty|localhost
 |SERVE_PROTOCOL|One of 'http' or 'https'|https
+|BACKEND|The persistence backend to use, one of 'bolt', 'dynamodb'|bolt
+
+Shorty provides two persistence mechanisms: A Bolt database, persisting all data
+in a single database file and a DynamoDB backend, storing all data in an AWS
+DynamoDB table.
+
+### Bolt Backend Configuration
+
+|Variable|Description|Default
 |DB_DIR|The directory used to store Shorty's database files|the current directory
 
-Shorty uses Bolt for persisting all shortened URLs, so no need to setup a
-database server. However, this implies that you cannot distribute Shorty onto
-multiple nodes.
+When you choose the Bolt backend, you don't need to setup a database server.
+However, this implies that you cannot distribute Shorty onto multiple nodes.
+
+### DynamoDB Backend Configuration
+
+The DynamoDB backend is configured via standard AWS environment variables; see
+https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html?shortFooter=true
+for an explanation.
 
 ## Running Docker image
 
