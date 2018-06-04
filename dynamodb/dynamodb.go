@@ -1,4 +1,4 @@
-package main
+package dynamodb
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/makkes/shorty/db"
 	"github.com/pkg/errors"
 )
 
@@ -23,7 +24,7 @@ type ShortenedURL struct {
 }
 
 // NewDynamoDB creates and initializes a new DynamoDB connection
-func NewDynamoDB() (DB, error) {
+func NewDynamoDB() (db.DB, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String("eu-west-1"),
 	})

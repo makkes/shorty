@@ -1,4 +1,4 @@
-package main
+package boltdb
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/makkes/shorty/db"
 )
 
 // A BoltDB uses Bolt to persist URLs.
@@ -18,7 +19,7 @@ type BoltDB struct {
 }
 
 // NewBoltDB returns a BoltDB that uses db as database.
-func NewBoltDB() (DB, error) {
+func NewBoltDB() (db.DB, error) {
 	dbDir := os.Getenv("DB_DIR")
 	db, err := bolt.Open(path.Join(dbDir, "shorty.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {

@@ -1,4 +1,4 @@
-package main
+package db
 
 // DB is the interface for bundling all database operations.
 type DB interface {

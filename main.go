@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/makkes/shorty/boltdb"
+	"github.com/makkes/shorty/db"
+	"github.com/makkes/shorty/dynamodb"
 	"io"
 	"log"
 	"math/rand"
@@ -12,7 +15,7 @@ import (
 	"time"
 )
 
-func unshorten(db DB) http.HandlerFunc {
+func unshorten(db db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := []byte(r.URL.Path[1:][strings.LastIndex(r.URL.Path[1:], "/")+1:])
 		if len(key) == 0 {
@@ -44,7 +47,7 @@ func info(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "This is Shorty, running on "+hostname+"\n")
 }
 
-func shorten(protocol string, host string, keybuffer <-chan []byte, db DB) http.HandlerFunc {
+func shorten(protocol string, host string, keybuffer <-chan []byte, db db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query().Get("url")
 		if url == "" {
@@ -70,9 +73,9 @@ func shorten(protocol string, host string, keybuffer <-chan []byte, db DB) http.
 
 func main() {
 
-	backends := map[string]func() (DB, error){
-		"dynamodb": NewDynamoDB,
-		"bolt":     NewBoltDB,
+	backends := map[string]func() (db.DB, error){
+		"dynamodb": dynamodb.NewDynamoDB,
+		"bolt":     boltdb.NewBoltDB,
 	}
 
 	serveHost := os.Getenv("SERVE_HOST")
