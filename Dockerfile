@@ -8,6 +8,8 @@ RUN go build
 
 FROM alpine:latest
 
+RUN apk update && apk add ca-certificates
+
 WORKDIR /root
 COPY --from=builder /go/src/github.com/makkes/shorty/shorty .
 COPY --from=builder /go/src/github.com/makkes/shorty/assets assets
