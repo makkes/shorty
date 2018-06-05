@@ -39,6 +39,7 @@ DynamoDB table.
 ### Bolt Backend Configuration
 
 |Variable|Description|Default
+|---|---|---
 |DB_DIR|The directory used to store Shorty's database files|the current directory
 
 When you choose the Bolt backend, you don't need to setup a database server.
