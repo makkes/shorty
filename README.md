@@ -26,11 +26,11 @@ The startup configuration of Shorty is provided via environment variables:
 
 |Variable|Description|Default
 |---|---|---
-|LISTEN_HOST|The IP address/hostname to listen on|localhost
-|LISTEN_PORT|The port to listen on|3002
-|SERVE_HOST|The host used by users to reach Shorty|localhost
-|SERVE_PROTOCOL|One of 'http' or 'https'|https
-|BACKEND|The persistence backend to use, one of 'bolt', 'dynamodb'|bolt
+|`LISTEN_HOST`|The IP address/hostname to listen on|`localhost`
+|`LISTEN_PORT`|The port to listen on|`3002`
+|`SERVE_HOST`|The host used by users to reach Shorty|`localhost`
+|`SERVE_PROTOCOL`|One of `http` or `https`|`https`
+|`BACKEND`|The persistence backend to use, one of `bolt`, `dynamodb`|`bolt`
 
 Shorty provides two persistence mechanisms: A Bolt database, persisting all data
 in a single database file and a DynamoDB backend, storing all data in an AWS
@@ -40,7 +40,7 @@ DynamoDB table.
 
 |Variable|Description|Default
 |---|---|---
-|DB_DIR|The directory used to store Shorty's database files|the current directory
+|`DB_DIR`|The directory used to store Shorty's database files|the current directory
 
 When you choose the Bolt backend, you don't need to setup a database server.
 However, this implies that you cannot distribute Shorty onto multiple nodes.
