@@ -10,7 +10,9 @@ FROM alpine:latest
 
 RUN apk update && apk add ca-certificates
 
-WORKDIR /root
+RUN addgroup -S shorty && adduser -S -G shorty shorty
+USER shorty
+WORKDIR /home/shorty
 COPY --from=builder /go/src/github.com/makkes/shorty/shorty .
 COPY --from=builder /go/src/github.com/makkes/shorty/assets assets
 
