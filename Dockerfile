@@ -1,9 +1,9 @@
-FROM golang:1.11.5-alpine as builder
+FROM golang:1.11.5 as builder
 
-WORKDIR /go/src/github.com/makkes/shorty
-RUN apk add --no-cache git
+WORKDIR /shorty
 COPY . .
-RUN go get
+RUN go get -t
+RUN go test ./...
 RUN go build
 
 FROM alpine:latest
