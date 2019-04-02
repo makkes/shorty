@@ -6,19 +6,20 @@ A very simple URL shortener with an even simpler UI.
 
 ## Installation
 
-To install Shorty, run 
+To install Shorty, you have 3 options: 
 
-```
-go get github.com/makkes/shorty
-```
-
-or grab the binary of the [most current
-release](https://github.com/makkes/shorty/releases).
-
-## Running
-
-To start Shorty, simply call `shorty` (assuming that `$GOPATH/bin` is on your
-`$PATH`), passing the parameters fit to your environment (see below).
+1. Install using Go:
+   ```
+   go get github.com/makkes/shorty
+   ```
+   Then you can just run `shorty` (see below for runtime parameters).
+2. Grab the binary of the [most current
+   release](https://github.com/makkes/shorty/releases).
+3. Get the Docker image:
+   ```
+   docker pull makkes/shorty:VERSION
+   ```
+   `VERSION` is either `latest` or a release number such as `v1.1.0`.
 
 ## Configuration/Persistence
 
@@ -50,10 +51,6 @@ However, this implies that you cannot distribute Shorty onto multiple nodes.
 The DynamoDB backend is configured via standard AWS environment variables; see
 https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html?shortFooter=true
 for an explanation.
-
-## Running Docker image
-
-There are Docker images available at https://hub.docker.com/r/makkes/shorty/.
 
 ## License
 
