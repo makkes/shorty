@@ -1,7 +1,5 @@
 # Shorty
 
-test
-
 [![Build Status](https://travis-ci.org/makkes/shorty.svg?branch=master)](https://travis-ci.org/makkes/shorty)
 
 A very simple URL shortener with an even simpler UI.
