@@ -1,4 +1,4 @@
-function shorten(url) {
+function shorten(url, key) {
 
     function feedback(msg) {
         var feedbackElem = document.querySelector("#feedback");
@@ -18,7 +18,7 @@ function shorten(url) {
     req.addEventListener("load", function() {
         var res = document.querySelector("#result");
         if (this.status !== 200) {
-            feedback('An unrecoverable error occurred.');
+            feedback(this.statusText + ": " + this.responseText);
             return;
         }
         res.value = this.responseText;
@@ -26,16 +26,17 @@ function shorten(url) {
         res.focus();
         res.select();
     });
-    req.open("GET", "/shorten?url=" + encodeURIComponent(url));
+    req.open("GET", "/shorten?url=" + encodeURIComponent(url) + "&key=" + encodeURIComponent(key));
     req.send();
 }
 
 window.addEventListener("load", function(ev) {
     var form = document.querySelector("form");
     urlElem = document.querySelector("#url");
+    keyElem = document.querySelector("#key");
     form.addEventListener("submit", function(ev) {
         ev.preventDefault();
-        shorten(urlElem.value);
+        shorten(urlElem.value, keyElem.value);
     });
     urlElem.focus();
 });

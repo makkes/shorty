@@ -1,7 +1,6 @@
 package boltdb
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +9,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/makkes/shorty/db"
+	dbpkg "github.com/makkes/shorty/db"
 )
 
 // A BoltDB uses Bolt to persist URLs.
@@ -18,18 +17,22 @@ type BoltDB struct {
 	*bolt.DB
 }
 
+var _ dbpkg.DB = BoltDB{}
+
 // NewBoltDB returns a BoltDB that uses db as database.
-func NewBoltDB() (db.DB, error) {
+func NewBoltDB() (dbpkg.DB, error) {
+	res := BoltDB{}
 	dbDir := os.Getenv("DB_DIR")
 	db, err := bolt.Open(path.Join(dbDir, "shorty.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error opening Bolt DB: %s", err))
+		return res, fmt.Errorf("Error opening Bolt DB: %w", err)
 	}
 
-	return &BoltDB{db}, nil
+	res.DB = db
+	return res, nil
 }
 
-func (db *BoltDB) GetURL(key []byte) ([]byte, error) {
+func (db BoltDB) GetURL(key []byte) ([]byte, error) {
 	var url []byte
 	err := db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("shorty"))
@@ -43,25 +46,18 @@ func (db *BoltDB) GetURL(key []byte) ([]byte, error) {
 }
 
 // SaveURL saves the given url using a key from the keybuffer as short URL.
-func (db *BoltDB) SaveURL(url string, keybuffer <-chan []byte) (string, error) {
-	var key []byte
+func (db BoltDB) SaveURL(url string, key []byte) error {
 	err := db.Update(func(tx *bolt.Tx) error {
 		invbucket, err := tx.CreateBucketIfNotExists([]byte("invshorty"))
 		if err != nil {
 			return err
 		}
-		existantKey := invbucket.Get([]byte(url))
-		if existantKey != nil {
-			key = existantKey
-			return nil
-		}
-		key = <-keybuffer
 		bucket, err := tx.CreateBucketIfNotExists([]byte("shorty"))
 		if err != nil {
 			return err
 		}
 		if bucket.Get(key) != nil {
-			return fmt.Errorf("Key collision: %s", key)
+			return dbpkg.NewErrKeyCollision(key)
 		}
 		err = invbucket.Put([]byte(url), key)
 		if err != nil {
@@ -70,7 +66,7 @@ func (db *BoltDB) SaveURL(url string, keybuffer <-chan []byte) (string, error) {
 		err = bucket.Put(key, []byte(url))
 		return err
 	})
-	return string(key), err
+	return err
 }
 
 func collectStats(dbDir string, statch <-chan []byte) {

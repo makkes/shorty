@@ -1,21 +1,22 @@
 package main
 
 import (
-	"github.com/makkes/shorty/boltdb"
-	"github.com/makkes/shorty/db"
-	"github.com/makkes/shorty/dynamodb"
+	"errors"
+	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
-	"time"
+
+	"github.com/makkes/shorty/boltdb"
+	"github.com/makkes/shorty/db"
+	dbpkg "github.com/makkes/shorty/db"
 )
 
-func unshorten(db db.DB) http.HandlerFunc {
+func unshorten(db dbpkg.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := []byte(r.URL.Path[1:][strings.LastIndex(r.URL.Path[1:], "/")+1:])
 		if len(key) == 0 {
@@ -29,12 +30,16 @@ func unshorten(db db.DB) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		if url == nil {
+			log.Printf("no URL found for key %q", key)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		w.Header().Add("Location", string(url))
 		w.WriteHeader(http.StatusMovedPermanently)
 		_, err = w.Write(url)
+		if err != nil {
+			log.Printf("failed writing response: %v", err)
+		}
 	}
 }
 
@@ -47,24 +52,35 @@ func info(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "This is Shorty, running on "+hostname+"\n")
 }
 
-func shorten(protocol string, host string, keybuffer <-chan []byte, db db.DB) http.HandlerFunc {
+func shorten(protocol string, host string, keybuffer <-chan []byte, db dbpkg.DB) http.HandlerFunc {
+	urlProtoRE := regexp.MustCompile("^http(s?)://")
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Query().Get("url")
 		if url == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		m, _ := regexp.Match("^http(s?)://", []byte(url))
-		if !m {
+		if !urlProtoRE.Match([]byte(url)) {
 			url = "http://" + url
 		}
-		key, err := db.SaveURL(url, keybuffer)
+
+		key := []byte(r.URL.Query().Get("key"))
+		if len(key) == 0 {
+			key = <-keybuffer
+		}
+
+		err := db.SaveURL(url, key)
 		if err != nil {
-			log.Println(err)
+			if errors.Is(err, dbpkg.ErrKeyCollision{}) {
+				http.Error(w, fmt.Sprintf("key %q is already used", key), http.StatusConflict)
+				return
+			}
+			log.Printf("failed saving URL to DB: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = io.WriteString(w, protocol+"://"+host+"/s/"+key+"\n")
+		_, err = fmt.Fprintf(w, "%s://%s/s/%s\n", protocol, host, key)
 		if err != nil {
 			log.Printf("Error returning shortened URL: %v", err)
 		}
@@ -74,8 +90,7 @@ func shorten(protocol string, host string, keybuffer <-chan []byte, db db.DB) ht
 func main() {
 
 	backends := map[string]func() (db.DB, error){
-		"dynamodb": dynamodb.NewDynamoDB,
-		"bolt":     boltdb.NewBoltDB,
+		"bolt": boltdb.NewBoltDB,
 	}
 
 	serveHost := os.Getenv("SERVE_HOST")
@@ -103,7 +118,6 @@ func main() {
 		backend = "bolt"
 	}
 
-	rand.Seed(time.Now().UnixNano())
 	keybuffer := make(chan []byte, 1000)
 	go keygen(keybuffer)
 

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/justsocialapps/assert"
+	"github.com/makkes/shorty/assert"
 )
 
 func TestKeygenWritesRandomKeyToChannel(t *testing.T) {
