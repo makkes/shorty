@@ -88,7 +88,6 @@ func shorten(protocol string, host string, keybuffer <-chan []byte, db dbpkg.DB)
 }
 
 func main() {
-
 	backends := map[string]func() (db.DB, error){
 		"bolt": boltdb.NewBoltDB,
 	}
@@ -127,12 +126,14 @@ func main() {
 	}
 
 	fs := http.FileServer(http.Dir("assets"))
-	http.Handle("/", fs)
+	http.Handle("/{$}", fs)
+	http.Handle("/css/", fs)
+	http.Handle("/js/", fs)
 
 	http.HandleFunc("/shorten", shorten(serveProtocol, serveHost, keybuffer, db))
 	http.HandleFunc("/info", info)
 
-	http.HandleFunc("/s/", unshorten(db))
+	http.HandleFunc("/", unshorten(db))
 	listener, err := net.Listen("tcp", listenHost+":"+listenPort)
 	if err != nil {
 		log.Fatal("Error starting HTTP server", err)
@@ -142,5 +143,4 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-
 }
