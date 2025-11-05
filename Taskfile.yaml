@@ -1,0 +1,106 @@
+version: "3"
+
+set:
+  - errexit
+  - nounset
+  - pipefail
+
+vars:
+  DOCKER_CMD:
+    sh: |
+      [ -n "{{.DOCKER_CMD}}" ] && echo {{.DOCKER_CMD}} || echo docker
+  BINARY_NAME: nominations-api
+  CGO_ENABLED: 0
+  LDFLAGS: -w -s
+  GOOS:
+    sh: go env GOOS
+  GOARCH:
+    sh: go env GOARCH
+  IMAGE_NAME: ghcr.io/makkes/shorty
+  GIT_TAG:
+    sh: git describe --tags --exact-match HEAD 2>/dev/null || echo "dev"
+  GIT_DIRTY:
+    sh: git diff --quiet || echo "yes"
+  IMAGE_PLATFORMS: linux/amd64,linux/arm64
+  IMAGE_TAG:
+    sh: |
+      if [ -n "{{.IMAGE_TAG}}" ] ; then
+        echo {{.IMAGE_TAG}}
+      elif [ -n "{{.GIT_DIRTY}}" ] ; then
+        echo "{{.GIT_TAG}}-dirty"
+      else
+        echo "{{.GIT_TAG}}"
+      fi
+
+tasks:
+  debug:
+    cmd: echo {{.IMAGE_TAG}}
+
+  build:
+    desc: Build the application and place it in ./build/
+    cmds:
+    - CGO_ENABLED={{.CGO_ENABLED}} GOOS={{.GOOS}} GOARCH={{.GOARCH}} go build -ldflags="{{.LDFLAGS}}" -o build/{{.BINARY_NAME}} -buildvcs=true ./cmd/server
+
+  test-unit:
+    desc: Run unit tests only
+    cmds:
+    - go test -v -race ./...
+
+  run:
+    desc: Run the application directly from source
+    cmds:
+    - go run .
+
+  print-image-ref:
+    internal: true
+    cmd: echo {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+
+  prune-image-ref:
+    internal: true
+    cmd: docker manifest rm {{.IMAGE_NAME}}:{{.IMAGE_TAG}} || true
+
+  push-release-image:
+    desc: Build and push a container image
+    deps: [prune-image-ref,print-image-ref]
+    cmd: docker buildx build
+      --sbom=true
+      --provenance=true
+      --platform={{.IMAGE_PLATFORMS}}
+      --push
+      -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+      .
+
+  sign-image:
+    desc: Sign the most current container image
+    cmd: cosign sign -y {{.IMAGE_NAME}}:{{.IMAGE_TAG}}@$(skopeo inspect --format '{{"{{"}}.Digest}}' docker://{{.IMAGE_NAME}}:{{.IMAGE_TAG}})
+
+  build-local-image:
+    desc: Build a container image without pushing it
+    cmds:
+    - "{{.DOCKER_CMD}} build -t {{.IMAGE_NAME}}:dev ."
+
+  check-security:
+    desc: Run security checks with govulncheck
+    cmds:
+      - go tool -modfile=tools/go.mod govulncheck ./...
+
+  lint:
+    desc: Lint the code using golangci-lint
+    cmds:
+      - go tool -modfile=tools/go.mod golangci-lint run -v
+
+  lint-spec:
+    desc: Validates the OpenAPI spec file against a set of rules
+    cmd: "{{.DOCKER_CMD}} run -v $PWD/openapi.yaml:/openapi.yaml --rm redocly/cli lint /openapi.yaml"
+
+  build-docs:
+    desc: Generates the API documentation in HTML format
+    cmd: touch frontend/static/docs/api/index.html &&
+      {{.DOCKER_CMD}} run
+        -v $PWD/openapi.yaml:/openapi.yaml
+        -v $PWD/frontend/static/docs/api/index.html:/out/index.html
+        -v $PWD/redocly.yaml:/redocly.yaml
+        --rm redocly/cli
+        build-docs /openapi.yaml
+          -o /out/index.html
+          --config /redocly.yaml

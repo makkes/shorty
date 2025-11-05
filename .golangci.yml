@@ -1,0 +1,147 @@
+version: "2"
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+  allow-serial-runners: true
+
+output:
+  show-stats: true
+
+formatters:
+  enable:
+    - gci
+    - goimports
+    - gofumpt
+  settings:
+    goimports:
+      local-prefixes:
+      - github.com/makkes/shorty
+    gci:
+      sections:
+        - Standard
+        - Default
+        - Prefix(github.com/makkes)
+        - Prefix(github.com/makkes/shorty)
+
+linters:
+  default: all
+  disable:
+  - cyclop
+  - varnamelen
+  - noinlineerr
+  - nlreturn
+  - mnd
+  - exhaustruct
+  - wsl
+  - wsl_v5
+  - err113
+  - lll # we use revive's line-length-limit for this
+
+  settings:
+    inamedparam:
+      skip-single-param: true
+
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+
+    depguard:
+      rules:
+        main:
+          allow:
+          - $gostd
+          - github.com/makkes/shorty
+          - github.com/google/uuid
+          - github.com/lib/pq
+          - github.com/onsi/gomega
+          - github.com/spf13/pflag
+          - github.com/spf13/viper
+          - go.uber.org/mock/gomock
+
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+
+    gosec:
+      severity: medium
+      confidence: medium
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - unnamedResult
+        - whyNoLint
+
+    revive:
+      severity: error
+      enable-all-rules: true
+      directives:
+        - name: specify-disable-reason
+          severity: error
+      confidence: 0.1
+      rules:
+      - name: cognitive-complexity
+        arguments: [99]
+      - name: dot-imports
+        arguments:
+          - allowedPackages:
+            - github.com/onsi/gomega
+      - name: add-constant
+        disabled: true
+      - name: line-length-limit
+        severity: error
+        arguments: [150]
+      - name: unhandled-error
+        disabled: true # these are handled by errcheck
+      - name: function-length
+        disabled: true
+
+    staticcheck:
+      checks: ["all"]
+
+    funlen:
+      lines: 100
+      statements: 50
+      ignore-comments: true
+
+    gocognit:
+      min-complexity: 15
+
+    lll:
+      line-length: 120
+      tab-width: 4
+
+    nestif:
+      min-complexity: 4
+
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+      match-constant: true
+      numbers: true
+
+    misspell:
+      locale: US
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+  fix: false
+
