@@ -80,7 +80,7 @@ func shorten(protocol string, host string, keybuffer <-chan []byte, db dbpkg.DB)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = fmt.Fprintf(w, "%s://%s/s/%s\n", protocol, host, key)
+		_, err = fmt.Fprintf(w, "%s://%s/%s\n", protocol, host, key)
 		if err != nil {
 			log.Printf("Error returning shortened URL: %v", err)
 		}
