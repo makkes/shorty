@@ -6,6 +6,10 @@ FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS builder
 
 COPY --from=xx / /
 
+# We need git for Go to figure out version information to be put into the binary
+RUN apk add git
+RUN git --version
+
 WORKDIR /shorty
 COPY go.mod go.mod
 COPY go.sum go.sum
