@@ -60,13 +60,13 @@ func TestInfoReturnsInfoAboutTheRunningInstance(t *testing.T) {
 
 	assert := assert.NewAssert(t)
 	assert.Equal(w.Code, http.StatusOK, "Unexpected HTTP status")
-	assert.Match("This is Shorty, running on ", w.Body.String(), "Unexpected body")
+	assert.Match("This is Shorty ", w.Body.String(), "Unexpected body")
 }
 
 func TestShortenFollowsTheHappyPath(t *testing.T) {
 	w := setupShorten("?url=THEURL", "A new key", "http", &TestDB{})
 	assert := assert.NewAssert(t)
-	assert.Equal(w.Body.String(), "http://sho.rt/s/A new key\n", "Returned URL is incorrect")
+	assert.Equal(w.Body.String(), "http://sho.rt/A new key\n", "Returned URL is incorrect")
 	assert.Equal(w.Code, http.StatusOK, "Returned status code is incorrect")
 }
 
@@ -79,12 +79,12 @@ func TestShortenDoesntAcceptEmptyURLs(t *testing.T) {
 func TestShortenRespectsTheProtocol(t *testing.T) {
 	w := setupShorten("?url=THEURL", "A new key", "http", &TestDB{})
 	a := assert.NewAssert(t)
-	a.Equal(w.Body.String(), "http://sho.rt/s/A new key\n", "Returned URL is incorrect")
+	a.Equal(w.Body.String(), "http://sho.rt/A new key\n", "Returned URL is incorrect")
 	a.Equal(w.Code, http.StatusOK, "Returned status code is incorrect")
 
 	w = setupShorten("?url=THEURL", "A new key", "https", &TestDB{})
 	a = assert.NewAssert(t)
-	a.Equal(w.Body.String(), "https://sho.rt/s/A new key\n", "Returned URL is incorrect")
+	a.Equal(w.Body.String(), "https://sho.rt/A new key\n", "Returned URL is incorrect")
 	a.Equal(w.Code, http.StatusOK, "Returned status code is incorrect")
 }
 
@@ -115,7 +115,7 @@ func TestShortenCorrectlyStoresProvidedKey(t *testing.T) {
 	w := setupShorten("?url=test_url&key=my_key", "", "http", &TestDB{})
 	a := assert.NewAssert(t)
 	a.Equal(w.Code, http.StatusOK, "returned status code is incorrect")
-	a.Equal(w.Body.String(), "http://sho.rt/s/my_key\n", "returned URL is incorrect")
+	a.Equal(w.Body.String(), "http://sho.rt/my_key\n", "returned URL is incorrect")
 }
 
 func TestUnshortenFollowsTheHappyPath(t *testing.T) {

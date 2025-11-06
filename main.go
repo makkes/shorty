@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -14,6 +14,7 @@ import (
 	"github.com/makkes/shorty/boltdb"
 	"github.com/makkes/shorty/db"
 	dbpkg "github.com/makkes/shorty/db"
+	"github.com/makkes/shorty/version"
 )
 
 func unshorten(db dbpkg.DB) http.HandlerFunc {
@@ -44,12 +45,7 @@ func unshorten(db dbpkg.DB) http.HandlerFunc {
 }
 
 func info(w http.ResponseWriter, r *http.Request) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	io.WriteString(w, "This is Shorty, running on "+hostname+"\n")
+	fmt.Fprintf(w, "This is Shorty %s (%s)\n", version.Get().Version, version.Get().GitCommit)
 }
 
 func shorten(protocol string, host string, keybuffer <-chan []byte, db dbpkg.DB) http.HandlerFunc {
@@ -88,6 +84,12 @@ func shorten(protocol string, host string, keybuffer <-chan []byte, db dbpkg.DB)
 }
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level:     slog.LevelDebug,
+		AddSource: false,
+	}))
+	logger.Info("application initialized", "version", version.Get())
+
 	backends := map[string]func() (db.DB, error){
 		"bolt": boltdb.NewBoltDB,
 	}
