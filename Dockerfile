@@ -16,6 +16,7 @@ COPY keygen.go keygen.go
 COPY assets assets
 COPY boltdb boltdb
 COPY db db
+COPY version version
 
 ARG TARGETPLATFORM
 ENV CGO_ENABLED=0
