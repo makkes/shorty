@@ -4,7 +4,7 @@ function shorten(url, key) {
         var feedbackElem = document.querySelector("#feedback");
         feedbackElem.querySelector('.text').innerHTML = msg;
         feedbackElem.classList.add('visible');
-        window.setTimeout(function() {
+        window.setTimeout(function () {
             feedbackElem.classList.remove('visible');
         }, 3000);
     }
@@ -15,7 +15,7 @@ function shorten(url, key) {
     }
 
     var req = new XMLHttpRequest();
-    req.addEventListener("load", function() {
+    req.addEventListener("load", function () {
         var res = document.querySelector("#result");
         if (this.status !== 200) {
             feedback(this.statusText + ": " + this.responseText);
@@ -30,11 +30,11 @@ function shorten(url, key) {
     req.send();
 }
 
-window.addEventListener("load", function(ev) {
+window.addEventListener("load", function (ev) {
     var form = document.querySelector("form");
     urlElem = document.querySelector("#url");
     keyElem = document.querySelector("#key");
-    form.addEventListener("submit", function(ev) {
+    form.addEventListener("submit", function (ev) {
         ev.preventDefault();
         shorten(urlElem.value, keyElem.value);
     });

@@ -10,10 +10,12 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/makkes/shorty/boltdb"
 	"github.com/makkes/shorty/db"
 	dbpkg "github.com/makkes/shorty/db"
+	"github.com/makkes/shorty/ratelimiter"
 	"github.com/makkes/shorty/version"
 )
 
@@ -44,8 +46,15 @@ func unshorten(db dbpkg.DB) http.HandlerFunc {
 	}
 }
 
-func info(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "This is Shorty %s (%s)\n", version.Get().Version, version.Get().GitCommit)
+func info(db dbpkg.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stats, err := db.GetStats()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprintf(w, "This is Shorty %s (%s), currently serving %d shortened URLs\n", version.Get().Version, version.Get().GitCommit, stats.StoredURLs)
+	}
 }
 
 func shorten(protocol string, host string, keybuffer <-chan []byte, db dbpkg.DB) http.HandlerFunc {
@@ -132,8 +141,10 @@ func main() {
 	http.Handle("/css/", fs)
 	http.Handle("/js/", fs)
 
-	http.HandleFunc("/shorten", shorten(serveProtocol, serveHost, keybuffer, db))
-	http.HandleFunc("/info", info)
+	limiter := ratelimiter.NewRateLimiter(5, time.Minute)
+
+	http.Handle("/shorten", limiter.Middleware(shorten(serveProtocol, serveHost, keybuffer, db)))
+	http.HandleFunc("/info", info(db))
 
 	http.HandleFunc("/", unshorten(db))
 	listener, err := net.Listen("tcp", listenHost+":"+listenPort)

@@ -6,6 +6,7 @@ import "fmt"
 type DB interface {
 	SaveURL(url string, key []byte) error
 	GetURL(key []byte) ([]byte, error)
+	GetStats() (Stats, error)
 }
 
 type ErrKeyCollision struct {
@@ -25,4 +26,8 @@ func (e ErrKeyCollision) Error() string {
 func (e ErrKeyCollision) Is(target error) bool {
 	_, ok := target.(ErrKeyCollision)
 	return ok
+}
+
+type Stats struct {
+	StoredURLs int
 }

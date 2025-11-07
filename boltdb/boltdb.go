@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+
 	dbpkg "github.com/makkes/shorty/db"
 )
 
@@ -23,7 +24,7 @@ var _ dbpkg.DB = BoltDB{}
 func NewBoltDB() (dbpkg.DB, error) {
 	res := BoltDB{}
 	dbDir := os.Getenv("DB_DIR")
-	db, err := bolt.Open(path.Join(dbDir, "shorty.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(path.Join(dbDir, "shorty.db"), 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return res, fmt.Errorf("Error opening Bolt DB: %w", err)
 	}
@@ -66,11 +67,28 @@ func (db BoltDB) SaveURL(url string, key []byte) error {
 		err = bucket.Put(key, []byte(url))
 		return err
 	})
+
 	return err
 }
 
+func (db BoltDB) GetStats() (dbpkg.Stats, error) {
+	var res dbpkg.Stats
+
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("shorty"))
+		if bucket == nil {
+			return nil
+		}
+		stats := bucket.Stats()
+		res.StoredURLs = stats.KeyN
+		return nil
+	})
+
+	return res, err
+}
+
 func collectStats(dbDir string, statch <-chan []byte) {
-	db, err := bolt.Open(path.Join(dbDir, "shorty_stats.db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(path.Join(dbDir, "shorty_stats.db"), 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal("Error opening Bolt DB for stats: ", err)
 	}
@@ -79,7 +97,6 @@ func collectStats(dbDir string, statch <-chan []byte) {
 		if err != nil {
 			log.Printf("Error closing stats DB: %v", closeerr)
 		}
-
 	}()
 	for {
 		url := <-statch
