@@ -18,21 +18,25 @@ type TestDB struct {
 	url     []byte
 }
 
-func (db *TestDB) SaveURL(url string, key []byte) error {
-	db.key = key
-	db.url = []byte(url)
-	return db.saveErr
+func (tdb *TestDB) SaveURL(url string, key []byte) error {
+	tdb.key = key
+	tdb.url = []byte(url)
+	return tdb.saveErr
 }
 
-func (db *TestDB) GetURL(key []byte) ([]byte, error) {
-	if db.getErr != nil {
-		return nil, db.getErr
+func (tdb *TestDB) GetURL(key []byte) ([]byte, error) {
+	if tdb.getErr != nil {
+		return nil, tdb.getErr
 	}
 
-	if slices.Equal(db.key, key) {
-		return db.url, nil
+	if slices.Equal(tdb.key, key) {
+		return tdb.url, nil
 	}
 	return nil, nil
+}
+
+func (tdb *TestDB) GetStats() (db.Stats, error) {
+	return db.Stats{}, nil
 }
 
 func setupShorten(url, key, proto string, db db.DB) *httptest.ResponseRecorder {
@@ -56,7 +60,7 @@ func setupUnshorten(url string, db db.DB) *httptest.ResponseRecorder {
 func TestInfoReturnsInfoAboutTheRunningInstance(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/info", nil)
 	w := httptest.NewRecorder()
-	http.HandlerFunc(info).ServeHTTP(w, req)
+	http.HandlerFunc(info(&TestDB{})).ServeHTTP(w, req)
 
 	assert := assert.NewAssert(t)
 	assert.Equal(w.Code, http.StatusOK, "Unexpected HTTP status")

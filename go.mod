@@ -3,8 +3,8 @@ module github.com/makkes/shorty
 go 1.25.0
 
 require (
-	github.com/boltdb/bolt v1.3.1
 	github.com/onsi/gomega v1.38.2
+	go.etcd.io/bbolt v1.4.3
 )
 
 require (

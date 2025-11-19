@@ -49,7 +49,7 @@ tasks:
   run:
     desc: Run the application directly from source
     cmds:
-    - go run .
+    - go run -race .
 
   print-image-ref:
     internal: true
