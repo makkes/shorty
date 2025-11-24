@@ -21,7 +21,7 @@ jobs:
       packages: write # for pushing and signing container images.
     steps:
     - name: checkout
-      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
     - name: install task
       uses: go-task/setup-task@0ab1b2a65bc55236a3bc64cde78f80e20e8885c2 # v1.0.0
     - name: login to GitHub Container Registry
