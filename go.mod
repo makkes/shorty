@@ -3,8 +3,8 @@ module github.com/makkes/shorty
 go 1.25.0
 
 require (
-	github.com/onsi/gomega v1.41.0
-	go.etcd.io/bbolt v1.4.3
+	github.com/onsi/gomega v1.42.0
+	go.etcd.io/bbolt v1.5.0
 )
 
 require (
@@ -12,6 +12,6 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 )
